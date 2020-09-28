@@ -1,2 +1,2 @@
-# simclrv1_plus_v2
-A SimCLR implementation of Version 1 and 2 in pytorch.
+# SimCLR by Chen et al. (2020)
+A SimCLR implementation in pytorch.
