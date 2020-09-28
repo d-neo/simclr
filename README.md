@@ -1,2 +1,2 @@
-# SimCLR by Chen et al. (2020)
+# SimCLR
 A SimCLR implementation in pytorch.
