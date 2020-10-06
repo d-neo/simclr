@@ -34,6 +34,8 @@ parser.add_argument('--test', default="True", type=str, metavar='W', help='test 
 parser.add_argument('--model-dir', default="", type=str, metavar='W', help='if test true give model dir!')
 # Linear Evaluation
 parser.add_argument('--epochs-lineval', default=500, type=int, metavar='N', help='number of total epochs to run in linEval')
+# 
+parser.add_argument('--labels', default="full", type=str, metavar='N', help='1%, 10% or full labelled data sets are supported')
 
 args = parser.parse_args()
 
@@ -94,6 +96,26 @@ def training_model():
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
 
+    if args.labels == "1%":
+        train_X = np.load('data/cifar_1%_xtrain_augmented.npy')
+        train_y = np.load('data/cifar_1%_xlabels_augmented.npy')
+        train = torch.utils.data.TensorDataset(
+        torch.from_numpy(train_X), torch.from_numpy(train_y)
+        )
+        train_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True, drop_last=True
+        )
+
+    if args.labels == "10%":
+        train_X = np.load('data/cifar_10%_xtrain_augmented.npy')
+        train_y = np.load('data/cifar_10%_xlabels_augmented.npy')
+        train = torch.utils.data.TensorDataset(
+            torch.from_numpy(train_X), torch.from_numpy(train_y)
+            )
+        train_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True
+            )
+
     encoder = modify_resnet_model(get_resnet(args.arch, pretrained=False))
     n_features = encoder.fc.in_features  # get dimensions of fc layer
     model = supm.modelSupervised(
@@ -111,6 +133,12 @@ def training_model():
         writer.add_scalar("Loss/train_supervised", train_loss, epoch)
         #writer.add_scalar("lr_adj/train", lr, epoch)
         model.trainloss.append(train_loss)
+        if epoch == 100: 
+            torch.save(model, "saved_models/supervised/"+str(dt_string)+"STEP_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(100)+"_batch_size"+str(args.batch_size)
+                                         +"_data"+str(args.dataset)+".pth")
+        if epoch == 200: 
+            torch.save(model, "saved_models/supervised/"+str(dt_string)+"STEP_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(200)+"_batch_size"+str(args.batch_size)
+                                         +"_data"+str(args.dataset)+".pth")
 
     writer.flush()
     torch.save(model, "saved_models/supervised/"+str(dt_string)+"_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(args.epochs)+"_batch_size"+str(args.batch_size)
@@ -140,6 +168,28 @@ def test_model(model=None):
         raise NotImplementedError
 
     memory_loader = torch.utils.data.DataLoader(memory_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+
+    if args.labels == "1%":
+        train_X = np.load('data/cifar_1%_xtrain.npy')
+        train_y = np.load('data/cifar_1%_xlabels.npy')
+        train = torch.utils.data.TensorDataset(
+            torch.from_numpy(train_X), torch.from_numpy(train_y)
+            )
+        memory_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True
+            )
+
+    if args.labels == "10%":
+        train_X = np.load('data/cifar_10%_xtrain.npy')
+        train_y = np.load('data/cifar_10%_xlabels.npy')
+        train = torch.utils.data.TensorDataset(
+            torch.from_numpy(train_X), torch.from_numpy(train_y)
+        )
+        memory_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True
+        )
+
+
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     encoder_f = model.encoder_f

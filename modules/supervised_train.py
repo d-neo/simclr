@@ -10,7 +10,8 @@ def train(net, data_loader, train_optimizer, criterion, epoch, args):
     for (images, labels) in train_bar:
         im_1 = images[0].cuda(non_blocking=True)
         labels = labels.to("cuda")
-        
+        if args.labels == "1%" or args.labels == "10%":
+            im_1 = images.cuda(non_blocking=True)
         train_optimizer.zero_grad()
         output = net.forward(im_1)
         loss = criterion(output, labels)

@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description='Train simCLRv1 on CIFAR-10')
 # Model-Architecture
 parser.add_argument('-a', '--arch', default='resnet18')
 # lr: 0.06 for batch 512 (or 0.03 for batch 256) 0.12 for 1024?
-parser.add_argument('--lr', '--learning-rate', default=0.0003, type=float, metavar='LR', help='initial learning rate', dest='lr')
+parser.add_argument('--lr', '--learning-rate', default=0.0006, type=float, metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--epochs', default=20, type=int, metavar='N', help='number of total epochs to run')
 parser.add_argument('--schedule', default=[120, 160], nargs='*', type=int, help='learning rate schedule (when to drop lr by 10x); does not take effect if --cos is on')
 parser.add_argument('--cos', action='store_true', help='use cosine lr schedule')
@@ -29,16 +29,19 @@ parser.add_argument('--wd', default=5e-4, type=float, metavar='W', help='weight 
 parser.add_argument('--dataset', default="CIFAR10", type=str, metavar='W', help='dataset')
 parser.add_argument('--dataset-dir', default="/data", type=str, metavar='W', help='dataset directory')
 # SIMCLR specific configs:
-parser.add_argument('--dim', default=128, type=int, help='feature dimension')
-parser.add_argument('--t', default=0.5, type=float, help='softmax temperature')
+parser.add_argument('--dim', default=512, type=int, help='feature dimension')
+parser.add_argument('--t', default=0.2, type=float, help='softmax temperature')
 #
 parser.add_argument('--train', default="True", type=str, metavar='W', help='training true or false')
 parser.add_argument('--test', default="True", type=str, metavar='W', help='test true or false')
 parser.add_argument('--model-dir', default="", type=str, metavar='W', help='if test true give model dir!')
 # Linear Evaluation
 parser.add_argument('--epochs-lineval', default=500, type=int, metavar='N', help='number of total epochs to run in linEval')
+# Labels
+parser.add_argument('--labels', default="full", type=str, metavar='N', help='1%, 10% or full labelled data sets are supported')
 
 args = parser.parse_args()
+
 
 if args.train == "True":
     args.train = True
@@ -115,6 +118,12 @@ def training_model():
         writer.add_scalar("Loss/train_simCLR", train_loss, epoch)
         #writer.add_scalar("lr_adj/train", lr, epoch)
         model.trainloss.append(train_loss)
+        if epoch == 100: 
+            torch.save(model, "saved_models/simclr/"+str(dt_string)+"STEP_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(100)+"_batch_size"+str(args.batch_size)
+                                         +"_dim"+str(args.dim)+"_t"+str(args.t)+"_data"+str(args.dataset)+".pth")
+        if epoch == 200: 
+            torch.save(model, "saved_models/simclr/"+str(dt_string)+"STEP_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(200)+"_batch_size"+str(args.batch_size)
+                                         +"_dim"+str(args.dim)+"_t"+str(args.t)+"_data"+str(args.dataset)+".pth")
 
     writer.flush()
     torch.save(model, "saved_models/simclr/"+str(dt_string)+"_model"+str(args.arch)+"_lr"+str(args.lr)+"_epochs"+str(args.epochs)+"_batch_size"+str(args.batch_size)
@@ -144,13 +153,34 @@ def test_model(model=None):
         raise NotImplementedError
 
     memory_loader = torch.utils.data.DataLoader(memory_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+
+    if args.labels == "1%":
+        train_X = np.load('data/cifar_1%_xtrain.npy')
+        train_y = np.load('data/cifar_1%_xlabels.npy')
+        train = torch.utils.data.TensorDataset(
+            torch.from_numpy(train_X), torch.from_numpy(train_y)
+            )
+        memory_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True
+            )
+
+    if args.labels == "10%":
+        train_X = np.load('data/cifar_10%_xtrain.npy')
+        train_y = np.load('data/cifar_10%_xlabels.npy')
+        train = torch.utils.data.TensorDataset(
+            torch.from_numpy(train_X), torch.from_numpy(train_y)
+            )
+        memory_loader = torch.utils.data.DataLoader(
+            train, batch_size=args.batch_size, shuffle=True
+            )
+
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     encoder_f = model.encoder_f
     linear_model = let.LogisticRegression(model.n_features, 10).cuda()
 
     (train_X, train_y, test_X, test_y) = let.get_features(encoder_f, memory_loader, test_loader)
-    
+
     arr_train_loader, arr_test_loader = let.create_data_loaders_from_arrays(
         train_X, train_y, test_X, test_y, args.batch_size
     )

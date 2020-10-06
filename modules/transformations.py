@@ -64,9 +64,11 @@ class TransformsSimCLR:
                 transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            #transforms.RandomApply([MySolarizeTransform(130)], p=0.2),
+            transforms.RandomApply([MySolarizeTransform(130)], p=0.2),
+            #transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
             transforms.ToTensor(),
-            #transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
+            transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
+            #transforms.RandomErasing(p=0.2)
             ]
         )
 
