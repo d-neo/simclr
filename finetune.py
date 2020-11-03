@@ -1,5 +1,5 @@
 
-import modules.supervised_model as supm
+import modules.fintetune_model as finm
 import modules.simclr_model as sm 
 import modules.transformations as t 
 import modules.supervised_train as st
@@ -110,7 +110,7 @@ def training_model():
     model = torch.load(args.model_dir)
     encoder = model.encoder_f
     n_features = model.n_features  # get dimensions of fc layer
-    model = supm.modelSupervised(
+    model = finm.modelSupervised(
         encoder,
         n_features,
     ).cuda()

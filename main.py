@@ -3,6 +3,9 @@ import modules.simclr_model as sm
 import modules.transformations as t 
 import modules.simclr_train as smtr
 import modules.lin_eval_testmoduls as let
+import modules.loss_functions as lf
+import modules.lars as lars
+import modules.imagenet as inet 
 #from modules.transformations import TransformsSimCLR
 import argparse
 import torchvision
@@ -25,8 +28,8 @@ parser.add_argument('--epochs', default=20, type=int, metavar='N', help='number 
 parser.add_argument('--schedule', default=[120, 160], nargs='*', type=int, help='learning rate schedule (when to drop lr by 10x); does not take effect if --cos is on')
 parser.add_argument('--cos', action='store_true', help='use cosine lr schedule')
 parser.add_argument('--batch-size', default=256, type=int, metavar='N', help='mini-batch size')
-parser.add_argument('--wd', default=5e-4, type=float, metavar='W', help='weight decay')
-parser.add_argument('--dataset', default="CIFAR10", type=str, metavar='W', help='dataset')
+parser.add_argument('--wd', default=1e-4, type=float, metavar='W', help='weight decay')
+parser.add_argument('--dataset', default="IMAGENET", type=str, metavar='W', help='dataset')
 parser.add_argument('--dataset-dir', default="/data", type=str, metavar='W', help='dataset directory')
 # SIMCLR specific configs:
 parser.add_argument('--dim', default=512, type=int, help='feature dimension')
@@ -94,28 +97,35 @@ def training_model():
         download=True,
         transform=t.TransformsSimCLR(),
         )   
-
+        train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
+        encoder = modify_resnet_model(get_resnet(args.arch, pretrained=False))
+    elif args.dataset == "IMAGENET":
+        data_path = "C:/Users/Dustin/Desktop/simclrv1_plus_v2/imagenet_new/Data/train"
+        dataset_train = inet.get_imagenet_datasets(data_path, test=False)
+        train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle = True, num_workers=4, drop_last=True)
+        encoder = get_resnet(args.arch, pretrained=False)
     else:
         raise NotImplementedError
 
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
-
-    encoder = modify_resnet_model(get_resnet(args.arch, pretrained=False))
     n_features = encoder.fc.in_features  # get dimensions of fc layer
     model = sm.modelSIMCLR(
         encoder,
         n_features,
+        lf.contrastive_loss_cosine_extra,
         dim=args.dim,
         T=args.t,
     ).cuda()
 
     # define optimizer
-    #optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    #optimizer = lars.LARS(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     epoch_start = 1
     for epoch in range(epoch_start, args.epochs + 1):
-        train_loss = smtr.train(model, train_loader, optimizer, epoch, args)
+        train_loss, neg_sim, pos_sim = smtr.train(model, train_loader, optimizer, epoch, args)
         writer.add_scalar("Loss/train_simCLR", train_loss, epoch)
+        writer.add_scalar("Positive_SIM/train_simCLR", pos_sim, epoch)
+        writer.add_scalar("Negative_SIM/train_simCLR", neg_sim, epoch)
         #writer.add_scalar("lr_adj/train", lr, epoch)
         model.trainloss.append(train_loss)
         if epoch == 100: 
@@ -137,54 +147,35 @@ def test_model(model=None):
         model = torch.load(args.model_dir)
 
     if args.dataset == "CIFAR10":
-        memory_data = torchvision.datasets.CIFAR10(
-        args.dataset_dir,
-        train = True, 
-        download=True,
-        transform=t.TransformsSimCLR().test_transform,
-        )
-        test_data = torchvision.datasets.CIFAR10(
-        args.dataset_dir,
-        train = False,
-        download=True,
-        transform=t.TransformsSimCLR().test_transform,
-        )
+        if args.labels == "1%":
+            train_X = np.load('data/cifar_1%_xtrain.npy')
+            train_y = np.load('data/cifar_1%_xlabels.npy')
+            dataset_train = torch.utils.data.TensorDataset(torch.from_numpy(train_X), torch.from_numpy(train_y))
+        elif args.labels == "10%":
+            train_X = np.load('data/cifar_10%_xtrain.npy')
+            train_y = np.load('data/cifar_10%_xlabels.npy')
+            dataset_train = torch.utils.data.TensorDataset(torch.from_numpy(train_X), torch.from_numpy(train_y))
+        else:
+            dataset_train = torchvision.datasets.CIFAR10(args.dataset_dir, train = True, download=True, transform=t.TransformsSimCLR().test_transform)
+            dataset_test = torchvision.datasets.CIFAR10(args.dataset_dir, train = False, download=True, transform=t.TransformsSimCLR().test_transform)
+        linear_model = let.LogisticRegression(model.n_features, 10).cuda()
+    elif args.dataset == "IMAGENET":
+        data_path = "C:/Users/Dustin/Desktop/simclrv1_plus_v2/imagenet_new/Data/train"
+        dataset_train, dataset_test = inet.get_imagenet_datasets(data_path, check_transform=False)
+        linear_model = let.LogisticRegression(model.n_features, 1000).cuda()
+
     else:
         raise NotImplementedError
 
-    memory_loader = torch.utils.data.DataLoader(memory_data, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-
-    if args.labels == "1%":
-        train_X = np.load('data/cifar_1%_xtrain.npy')
-        train_y = np.load('data/cifar_1%_xlabels.npy')
-        train = torch.utils.data.TensorDataset(
-            torch.from_numpy(train_X), torch.from_numpy(train_y)
-            )
-        memory_loader = torch.utils.data.DataLoader(
-            train, batch_size=args.batch_size, shuffle=True
-            )
-
-    if args.labels == "10%":
-        train_X = np.load('data/cifar_10%_xtrain.npy')
-        train_y = np.load('data/cifar_10%_xlabels.npy')
-        train = torch.utils.data.TensorDataset(
-            torch.from_numpy(train_X), torch.from_numpy(train_y)
-            )
-        memory_loader = torch.utils.data.DataLoader(
-            train, batch_size=args.batch_size, shuffle=True
-            )
-
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
-
+    # Create Dataloaders
+    memory_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    # Get Encoder
     encoder_f = model.encoder_f
-    linear_model = let.LogisticRegression(model.n_features, 10).cuda()
-
+    # Create Training and Test-Set for Regression Model
     (train_X, train_y, test_X, test_y) = let.get_features(encoder_f, memory_loader, test_loader)
-
-    arr_train_loader, arr_test_loader = let.create_data_loaders_from_arrays(
-        train_X, train_y, test_X, test_y, args.batch_size
-    )
-        
+    arr_train_loader, arr_test_loader = let.create_data_loaders_from_arrays(train_X, train_y, test_X, test_y, args.batch_size)
+    # Set up training
     optimizer = torch.optim.Adam(linear_model.parameters(), lr=3e-4)
     criterion = torch.nn.CrossEntropyLoss()
 

@@ -1,6 +1,6 @@
 from torchvision import transforms
 from PIL import Image, ImageOps 
-from PIL import ImageFilter
+from PIL import ImageFilter, ImageEnhance
 import random 
 import math
 import numpy as np 
@@ -47,6 +47,42 @@ class GaussianNoise(object):
         
         return out    
 
+class Equalize():
+    def __call__(self, x):
+        return ImageOps.equalize(x)
+    
+class AutoContrast():
+    def __call__(self, x):
+        return ImageOps.autocontrast(x)
+
+class Invert():
+    def __call__(self, x):
+        return ImageOps.invert(x)
+     
+class Posterize():
+    def __call__(self, x):
+        return ImageOps.posterize(x, 2)
+
+
+class Contrast():
+        def __call__(self, x):
+            return ImageEnhance.Contrast(x).enhance(2)
+
+
+class Color():
+    def __call__(self, x):
+        return ImageEnhance.Color(x).enhance(2)
+
+
+class Brightness():
+    def __call__(self, x):
+        return ImageEnhance.Brightness(x).enhance(2)
+
+
+class Sharpness():
+    def __call__(self, x):
+        return ImageEnhance.Sharpness(x).enhance(2)
+
 
 class TransformsSimCLR:
     """
@@ -64,11 +100,7 @@ class TransformsSimCLR:
                 transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([MySolarizeTransform(130)], p=0.2),
-            #transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
             transforms.ToTensor(),
-            transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
-            #transforms.RandomErasing(p=0.2)
             ]
         )
 
@@ -79,5 +111,33 @@ class TransformsSimCLR:
         )
 
     def __call__(self, x):
-        return [self.train_transform(x), self.train_transform(x)]
+        #return [self.train_transform(x), self.train_transform(x)]
+        return [self.train_transform(x) for _ in range(2)]
+        #return [self.train_transform(x), self.train_transform(x), self.train_transform(x),  self.train_transform(x), self.train_transform(x), self.train_transform(x),self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x)]
+
     
+
+"""
+self.train_transform = torchvision.transforms.Compose(
+    [  
+    transforms.RandomResizedCrop(32),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomApply([
+        transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+    ], p=0.8),
+    transforms.RandomGrayscale(p=0.2),
+    transforms.RandomApply([MySolarizeTransform(130)], p=0.2),
+    #transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+    #transforms.RandomApply([Equalize()], p=0.5),
+    #transforms.RandomApply([AutoContrast()], p=0.5),
+    #transforms.RandomApply([Invert()], p=0.5),
+    #transforms.RandomApply([Posterize()], p=0.5),
+    #transforms.RandomApply([Contrast()], p=0.5),
+    #transforms.RandomApply([Color()], p=0.5),
+    #transforms.RandomApply([Brightness()], p=0.5),
+    transforms.ToTensor(),
+    transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
+    #transforms.RandomErasing(p=0.2)
+    ]
+)
+"""
