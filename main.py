@@ -38,7 +38,7 @@ parser.add_argument('--cos', action='store_true', help='use cosine lr schedule')
 parser.add_argument('--batch-size', default=256, type=int, metavar='N', help='mini-batch size')
 parser.add_argument('--wd', default=1e-4, type=float, metavar='W', help='weight decay')
 parser.add_argument('--dataset', default="IMAGENET", type=str, metavar='W', help='dataset')
-parser.add_argument('--dataset-dir', default="/data", type=str, metavar='W', help='dataset directory')
+parser.add_argument('--dataset-dir', default="C:/Users/Dustin/Desktop/simclrv1_plus_v2/imagenet_new/Data/train", type=str, metavar='W', help='dataset directory')
 parser.add_argument('--method', default="selfsupervised", type=str, metavar='W', help='Selfsupervised, Supervised, Finetuned')
 parser.add_argument('--optimizer', default="adam", type=str, metavar='W', help='Adam, SGD, Lars')
 # SIMCLR specific configs:
@@ -92,8 +92,7 @@ def training_model():
         encoder = gm.modify_resnet_model(gm.get_resnet(args.arch, pretrained=False))
         outputdim = 10
     elif args.dataset == "IMAGENET":
-        data_path = "C:/Users/Dustin/Desktop/simclrv1_plus_v2/imagenet_new/Data/train"
-        dataset_train = inet.get_imagenet_datasets(data_path, test=False, numberViews=args.numberviews)
+        dataset_train = inet.get_imagenet_datasets(args.dataset_dir, test=False, numberViews=args.numberviews)
         train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle = True, num_workers=4, drop_last=True)
         encoder = gm.get_resnet(args.arch, pretrained=False)
         outputdim = 1000
@@ -171,8 +170,7 @@ def test_model(model=None):
         test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=0)
         linear_model = let.LogisticRegression(model.n_features, 10).cuda()
     elif args.dataset == "IMAGENET":
-        data_path = "C:/Users/Dustin/Desktop/simclrv1_plus_v2/imagenet_new/Data/train"
-        dataset_train, dataset_test = inet.get_imagenet_datasets(data_path, check_transform=False)
+        dataset_train, dataset_test = inet.get_imagenet_datasets(args.dataset_dir, check_transform=False)
         memory_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True, num_workers=4)
         test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=4)
         linear_model = let.LogisticRegression(model.n_features, 1000).cuda()
