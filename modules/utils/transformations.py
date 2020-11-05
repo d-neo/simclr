@@ -91,7 +91,8 @@ class TransformsSimCLR:
     denoted x ̃i and x ̃j, which we consider as a positive pair.
     """
 
-    def __init__(self):
+    def __init__(self, numberViews=2):
+        self.numberViews = numberViews
         self.train_transform = torchvision.transforms.Compose(
             [  
             transforms.RandomResizedCrop(32),
@@ -112,7 +113,7 @@ class TransformsSimCLR:
 
     def __call__(self, x):
         #return [self.train_transform(x), self.train_transform(x)]
-        return [self.train_transform(x) for _ in range(2)]
+        return [self.train_transform(x) for _ in range(self.numberViews)]
         #return [self.train_transform(x), self.train_transform(x), self.train_transform(x),  self.train_transform(x), self.train_transform(x), self.train_transform(x),self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x)]
 
     

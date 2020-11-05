@@ -8,7 +8,7 @@ class Identity(nn.Module):
         return x
 
 class modelSupervised(nn.Module):
-    def __init__(self, encoder, n_features):
+    def __init__(self, encoder, n_features, outputDim):
         # Inherit from nn module (standard)
         super(modelSupervised, self).__init__()
         # Instance Variables
@@ -17,9 +17,9 @@ class modelSupervised(nn.Module):
         # create the encoder
         self.encoder_f = encoder
         # Replace the fc layer with an Identity function
-        self.encoder_f.fc = Identity()
+        #self.encoder_f.fc = Identity()
         # Add a Layer for classification
-        self.classi = nn.Linear(self.n_features, 10, bias=False)
+        self.mlp = nn.Sequential (nn.Linear(self.n_features, outputDim))
 
     def supervised_loss(self, out_1, out_2):
         pass
@@ -32,4 +32,4 @@ class modelSupervised(nn.Module):
         Output:
            Output
         """
-        return self.classi(self.encoder_f(im1))
+        return self.mlp(self.encoder_f(im1))

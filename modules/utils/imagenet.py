@@ -10,8 +10,9 @@ IMG_SIZE = (128,128)
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, data_path, is_train, train_split = 0.9, random_seed = 42, target_transform = None, num_classes = None, transform=True):
+    def __init__(self, data_path, is_train, train_split = 0.9, random_seed = 42, target_transform = None, num_classes = None, transform=True, numberViews=2):
         super(ImageNetDataset, self).__init__()
+        self.numberViews = numberViews
         self.data_path = data_path
         self.transform = transform
         self.is_classes_limited = False
@@ -98,7 +99,7 @@ class ImageNetDataset(Dataset):
         """
         if self.transform==True:
             imgList = []
-            for _ in range(2):
+            for _ in range(self.numberViews):
                 tr = transforms.RandomResizedCrop(128)
                 im = tr(img)
                 tr = transforms.RandomHorizontalFlip(p=0.5)
@@ -133,13 +134,13 @@ class ImageNetDataset(Dataset):
         return self.classes[class_idx]['class_name']
 
 
-def get_imagenet_datasets(data_path, num_classes = None, test = True, check_transform=True):
+def get_imagenet_datasets(data_path, num_classes = None, test = True, check_transform=True, numberViews=2):
 
     random_seed = int(time.time())
 
-    dataset_train = ImageNetDataset(data_path,is_train = True, random_seed=random_seed, num_classes = num_classes, transform=check_transform)
+    dataset_train = ImageNetDataset(data_path,is_train = True, random_seed=random_seed, num_classes = num_classes, transform=check_transform, numberViews=numberViews)
     if test == True:
-        dataset_test = ImageNetDataset(data_path, is_train = False, random_seed=random_seed, num_classes = num_classes)
+        dataset_test = ImageNetDataset(data_path, is_train = False, random_seed=random_seed, num_classes = num_classes, transform=check_transform)
         return dataset_train, dataset_test
 
     return dataset_train
