@@ -8,14 +8,30 @@ from PIL import Image
 
 IMG_SIZE = (128,128)
 
-
 class ImageNetDataset(Dataset):
     def __init__(self, data_path, is_train, train_split = 0.9, random_seed = 42, target_transform = None, num_classes = None, transform=True, numberViews=2):
         super(ImageNetDataset, self).__init__()
+
         self.numberViews = numberViews
         self.data_path = data_path
         self.transform = transform
         self.is_classes_limited = False
+        self.train_transform = transforms.Compose(
+            [  
+            transforms.RandomResizedCrop(128),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.ToTensor()
+            ]
+        )
+        self.test_transform = transforms.Compose(
+            [
+            transforms.ToTensor()
+            ]
+        )
 
         if num_classes != None:
             self.is_classes_limited = True
@@ -66,60 +82,18 @@ class ImageNetDataset(Dataset):
         return len(self.img_idxes)
 
     def __getitem__(self, index):
-
         img_idx = self.img_idxes[index]
         img_info = self.image_list[img_idx]
-
         img = Image.open(img_info['image_path'])
 
         if img.mode == 'L':
             tr = transforms.Grayscale(num_output_channels=3)
-            img = tr(img)
-        
-        width, height = img.size
-        if min(width, height)>IMG_SIZE[0] * 1.5:
-            tr = transforms.Resize(int(IMG_SIZE[0] * 1.5))
-            img = tr(img)
-
-        width, height = img.size
-        if min(width, height)<IMG_SIZE[0]:
-            tr = transforms.Resize(IMG_SIZE)
-            img = tr(img)
-            
-        """
-        tr = transforms.RandomCrop(IMG_SIZE)
-        img = tr(img)
-
-        tr = transforms.ToTensor()
-        img = tr(img)
-        
-        
-        if (img.shape[0] != 3):
-            img = img[0:3]
-        """
-        if self.transform==True:
-            imgList = []
-            for _ in range(self.numberViews):
-                tr = transforms.RandomResizedCrop(128)
-                im = tr(img)
-                tr = transforms.RandomHorizontalFlip(p=0.5)
-                im = tr(im)
-                tr = transforms.RandomApply([
-                    transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
-                ], p=0.8)
-                im = tr(im)
-                tr = transforms.RandomGrayscale(p=0.2)
-                im = tr(im)
-                tr = transforms.ToTensor()
-                im = tr(im)
-                imgList.append(im)
-                
-            return (imgList, img_info['cls']['class_idx'])
-        else: 
-            tr = transforms.ToTensor()
-            img = tr(img)
-            
-            return (img, img_info['cls']['class_idx'])
+            img = tr(img)         
+ 
+        if self.transform==True:  
+            return ([self.train_transform(img) for _ in range(self.numberViews)], img_info['cls']['class_idx'])
+        else:  
+            return (self.test_transform(img), img_info['cls']['class_idx'])
 
     def get_number_of_classes(self):
         return self.num_classes
@@ -133,11 +107,8 @@ class ImageNetDataset(Dataset):
     def get_class_name(self, class_idx):
         return self.classes[class_idx]['class_name']
 
-
 def get_imagenet_datasets(data_path, num_classes = None, test = True, check_transform=True, numberViews=2):
-
     random_seed = int(time.time())
-
     dataset_train = ImageNetDataset(data_path,is_train = True, random_seed=random_seed, num_classes = num_classes, transform=check_transform, numberViews=numberViews)
     if test == True:
         dataset_test = ImageNetDataset(data_path, is_train = False, random_seed=random_seed, num_classes = num_classes, transform=check_transform)

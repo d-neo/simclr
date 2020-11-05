@@ -63,26 +63,21 @@ class Posterize():
     def __call__(self, x):
         return ImageOps.posterize(x, 2)
 
-
 class Contrast():
         def __call__(self, x):
             return ImageEnhance.Contrast(x).enhance(2)
-
 
 class Color():
     def __call__(self, x):
         return ImageEnhance.Color(x).enhance(2)
 
-
 class Brightness():
     def __call__(self, x):
         return ImageEnhance.Brightness(x).enhance(2)
 
-
 class Sharpness():
     def __call__(self, x):
         return ImageEnhance.Sharpness(x).enhance(2)
-
 
 class TransformsSimCLR:
     """
@@ -112,9 +107,7 @@ class TransformsSimCLR:
         )
 
     def __call__(self, x):
-        #return [self.train_transform(x), self.train_transform(x)]
         return [self.train_transform(x) for _ in range(self.numberViews)]
-        #return [self.train_transform(x), self.train_transform(x), self.train_transform(x),  self.train_transform(x), self.train_transform(x), self.train_transform(x),self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x), self.train_transform(x)]
 
     
 
