@@ -4,7 +4,7 @@ Including support for:
 - Data parallel training
 - LARS (Layer-wise Adaptive Rate Scaling) optimizer
 
-[Link to paper](https://arxiv.org/pdf/2002.05709.pdf)
+[Link to SimCLR paper by Chen et al.](https://arxiv.org/pdf/2002.05709.pdf)
 
 ### Results
 These are the top-1 accuracy of linear classifiers trained on the (frozen) representations learned by SimCLR:
@@ -27,6 +27,26 @@ SimCLR is a "simple framework for contrastive learning of visual representations
 <p align="center">
   <img src="https://github.com/Spijkervet/SimCLR/blob/master/media/architecture.png?raw=true" width="500"/>
 </p>
+
+## What is AVGSimCLR?
+
+Instead of creating two augmentations to calculate one loss, the AVGSimCLR approach averages the contrastive loss of multiple augmented views and backpropagate from there:   
+
+
+<img src="https://render.githubusercontent.com/render/math?math=loss_{A} = \frac{1}{N} \sum_{n \in A}^{} loss_{n_{1}, n_{2}}">
+
+with
+
+<img src="https://render.githubusercontent.com/render/math?math=A = {[(aug{1}, aug{2}), (aug{3}, aug_{4}) ....(aug_{i-1}, aug_{i})] , i \in \mathbb{N}}">
+
+and 
+
+<img src="https://render.githubusercontent.com/render/math?math=N = len(A)">
+
+
+where A is a list, consisting of two augmented views each. The length of the lists represents the number of losses averaged.
+
+The idea behind AVGSimCLR is closely related to bootstrap aggregation (Bagging). As the augmenation pipeline is stochastic, multiple losses are averaged to reduce noise, so that the network is able to learn more fundamental features across multiple augmented views. 
 
 ## Logging and TensorBoard
 To view results in TensorBoard, run:
