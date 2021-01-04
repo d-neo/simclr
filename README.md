@@ -11,10 +11,10 @@ These are the top-1 accuracy of linear classifiers trained on the (frozen) repre
 
 | Method  | Batch Size | ResNet | Projection output dimensionality | Epochs | Optimizer | CIFAR-10 | ImageNet (128x128)
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| SimCLR + Linear eval. | 256 | ResNet18 | 128 | 100 | Adam | 0.83 | 0.35 | 
-| AVGSimCLR + Linear eval. | 256 | ResNet50 | 128 | 100 | Adam | 0.861 | 0.356 | 
-| SimCLR + Finetuning (100% labels) | 256 | ResNet18 | 128 | 100 |  Adam | 0.904  | 0.438 |
-| AVGSimCLR + Finetuning (100% labels) | 256 | ResNet18 | 128 | 40 | Adam | 0.915  | 0.443 |
+| SimCLR + Linear eval. | 768 | ResNet18 | 128 | 100 | Adam | 0.83 | 0.35 | 
+| AVGSimCLR + Linear eval. | 768 | ResNet50 | 128 | 100 | Adam | 0.861 | 0.356 | 
+| SimCLR + Finetuning (100% labels) | 768 | ResNet18 | 128 | 100 |  Adam | 0.904  | 0.438 |
+| AVGSimCLR + Finetuning (100% labels) | 768 | ResNet18 | 128 | 40 | Adam | 0.915  | 0.443 |
 | Logistic Regression | - | - | - | 40 | Adam | 0.358 | 0.389 |
 
 
