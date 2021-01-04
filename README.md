@@ -9,13 +9,12 @@ Including support for:
 ### Results
 These are the top-1 accuracy of linear classifiers trained on the (frozen) representations learned by SimCLR:
 
-| Method  | Batch Size | ResNet | Projection output dimensionality | Epochs | Optimizer | STL-10 | CIFAR-10
+| Method  | Batch Size | ResNet | Projection output dimensionality | Epochs | Optimizer | CIFAR-10 | ImageNet (128x128)
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| SimCLR + Linear eval. | 256 | ResNet50 | 64 | 100 | Adam | **0.829** | **0.833** | 
-| SimCLR + Linear eval. | 256 | ResNet50 | 64 | 100 | LARS | 0.783 | - | 
-| SimCLR + Linear eval. | 256 | ResNet18 | 64 | 100 |  Adam | 0.765  | - |
-| SimCLR + Linear eval. | 256 | ResNet18 | 64 | 40 | Adam | 0.719  | - |
-| SimCLR + Linear eval. | 512 | ResNet18 | 64 | 40 | Adam | 0.71 | - |
+| SimCLR + Linear eval. | 256 | ResNet18 | 128 | 100 | Adam | 0.83 | 0.35 | 
+| AVGSimCLR + Linear eval. | 256 | ResNet50 | 128 | 100 | Adam | 0.861 | 0.356 | 
+| SimCLR + Finetuning (100% labels) | 256 | ResNet18 | 128 | 100 |  Adam | 0.904  | 0.438 |
+| AVGSimCLR + Finetuning (100% labels) | 256 | ResNet18 | 128 | 40 | Adam | 0.915  | 0.443 |
 | Logistic Regression | - | - | - | 40 | Adam | 0.358 | 0.389 |
 
 
