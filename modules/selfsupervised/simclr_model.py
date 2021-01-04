@@ -1,32 +1,33 @@
-
-
 import torch.nn as nn
 import torch.nn.functional as F
 import torch 
 
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
-
 class modelSIMCLR(nn.Module):
+    """ SIMCLR MODEL"""
 
     def __init__(self, encoder, n_features, loss_func, dim=128, T=0.1):
+        """ 
+        Input:
+            encoder: Encoder you want to use to get feature representations (eg. resnet18)
+            n_features: Type int - The dimension of the encoder output, your feature dimension
+            loss_func: The loss function you want to use (from loss_functions.py)
+            eval_model: If you have labels, the model you want to evaluate your feature representations on
+            eval_optimizer: The optimizer for your eval_model
+            dim: Type int - The dimension the projection head outputs
+            T: Type int - The temperature parameter in the contrastive loss function
+
+            Creates a SIMCLR model
+        """
         # Inherit from nn module (standard)
         super(modelSIMCLR, self).__init__()
-        # Instance Variables
-        self.trainloss = []
         self.T = T
         self.n_features = n_features
         self.loss_func = loss_func
         # create the encoder
         self.encoder_f = encoder
-        # Replace the fc layer with an Identity function
-        self.encoder_f.fc = Identity()
-        # We use a MLP with one hidden layer to obtain z_i = g(h_i) = W(2)σ(W(1)h_i) 
-        # where σ is a ReLU non-linearity.
+        self.encoder_f.fc = torch.nn.Identity()
+        #self.encoder_f.fc = torch.nn.Linear(512, 512)
+        # Create Projection Head
         self.mlp = nn.Sequential (
             nn.Linear(self.n_features, self.n_features, bias=False),
             nn.BatchNorm1d(num_features=self.n_features),
@@ -38,10 +39,11 @@ class modelSIMCLR(nn.Module):
     def forward(self, im1, im2, args):
         """
         Input:
-            im_q: a batch of query images
-            im_k: a batch of key images
-        Output:
-            loss
+            im1: a batch of query images
+            im2: differently augmented query images
+
+            Runs the encoder, runs the projection head, normalizes the output of the projection head 
+            and returns the contrastive loss given the loss_func from loss_functions.py 
         """
         # Get Representations
         h_i = self.encoder_f(im1)
@@ -54,23 +56,3 @@ class modelSIMCLR(nn.Module):
         z_j = nn.functional.normalize(z_j, p=2, dim=1) 
         
         return self.loss_func(z_i, z_j, self.T)
-
-
-"""
-    def contrastive_loss(self, out_1, out_2, args):
-        # [2*B, D]
-        out = torch.cat([out_1, out_2], dim=0)
-        # [2*B, 2*B]
-        sim_matrix = torch.exp(torch.mm(out, out.t().contiguous()) / self.T)
-        mask = (torch.ones_like(sim_matrix) - torch.eye(2 * args.batch_size, device=sim_matrix.device)).bool()
-        # [2*B, 2*B-1]
-        sim_matrix = sim_matrix.masked_select(mask).view(2 * args.batch_size, -1)
-
-        # compute loss
-        pos_sim = torch.exp(torch.sum(out_1 * out_2, dim=-1) / self.T)
-        # [2*B]
-        pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
-        loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
-
-        return loss
-"""

@@ -3,7 +3,6 @@ from statistics import mean
 import numpy as np 
 import torch.nn as nn
 
-# Adapted from https://github.com/gpeyre/SinkhornAutoDiff
 class SinkhornDistance(nn.Module):
     r"""
     Given two empirical measures each with :math:`P_1` locations
@@ -93,6 +92,9 @@ class SinkhornDistance(nn.Module):
         return tau * u + (1 - tau) * u1
 
 def contrastive_loss_cosine(out_1, out_2, T):
+    """
+
+    """
     # [2*B, D]
     out = torch.cat([out_1, out_2], dim=0)
     n_samples = len(out)
@@ -110,6 +112,9 @@ def contrastive_loss_cosine(out_1, out_2, T):
     return loss
 
 def contrastive_loss_cosine_extra(out_1, out_2, T):
+    """
+
+    """
     # [2*B, D]
     out = torch.cat([out_1, out_2], dim=0)
     n_samples = len(out)
@@ -130,6 +135,9 @@ def contrastive_loss_cosine_extra(out_1, out_2, T):
 
 
 def contrastive_loss_gaussian_euclidean(t1, t2, T):
+    """
+
+    """
     sigma = 1.0
     out = torch.cat([t1, t2], dim=0)
     n_samples = len(out)
@@ -149,6 +157,9 @@ def contrastive_loss_gaussian_euclidean(t1, t2, T):
     return loss
 
 def contrastive_loss_sne_euclidean(t1, t2, T):
+    """
+
+    """
     #sigma = 1.0
     out = torch.cat([t1, t2], dim=0)
     n_samples = len(out)
@@ -168,6 +179,9 @@ def contrastive_loss_sne_euclidean(t1, t2, T):
     return loss
 
 def contrastive_loss_tsne_euclidean(t1, t2, T):
+    """
+
+    """
     #sigma = 1.0
     out = torch.cat([t1, t2], dim=0)
     n_samples = len(out)
@@ -177,16 +191,41 @@ def contrastive_loss_tsne_euclidean(t1, t2, T):
     sim_matrix = sim_matrix.masked_select(mask).view(n_samples, -1)
 
     pos_sim = torch.exp( (1/(1+torch.cdist(t1,t2, p=2)**2))  / T )
-    mask = (torch.ones_like(pos_sim) - torch.eye(256, device=pos_sim.device)).bool()
-    pos_sim = pos_sim.masked_select(~mask).view(256, -1)
+    mask = (torch.ones_like(pos_sim) - torch.eye(int(n_samples/2), device=pos_sim.device)).bool()
+    pos_sim = pos_sim.masked_select(~mask).view(int(n_samples/2), -1)
     pos_sim = torch.reshape(pos_sim, (-1,))
     pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
 
     loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
 
-    return loss
+    return (loss, torch.zeros(1).cuda(), torch.zeros(1).cuda())
+
+def contrastive_loss_tsne_manhattan(t1, t2, T):
+    """
+
+    """
+    #sigma = 1.0
+    out = torch.cat([t1, t2], dim=0)
+    n_samples = len(out)
+
+    sim_matrix = torch.exp( (1/(1+torch.cdist(out, out, p=1)**2))  / T )
+    mask = (torch.ones_like(sim_matrix) - torch.eye(n_samples, device=sim_matrix.device)).bool()
+    sim_matrix = sim_matrix.masked_select(mask).view(n_samples, -1)
+
+    pos_sim = torch.exp( (1/(1+torch.cdist(t1,t2, p=1)**2))  / T )
+    mask = (torch.ones_like(pos_sim) - torch.eye(int(n_samples/2), device=pos_sim.device)).bool()
+    pos_sim = pos_sim.masked_select(~mask).view(int(n_samples/2), -1)
+    pos_sim = torch.reshape(pos_sim, (-1,))
+    pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
+
+    loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
+
+    return (loss, torch.zeros(1).cuda(), torch.zeros(1).cuda())
 
 def contrastive_loss_wasserstein_tsne(t1,t2,T):
+    """
+
+    """
     out = torch.cat([t1, t2], dim=0)
     n_samples = len(out)
     sinkhorn = SinkhornDistance(eps=0.1, max_iter=100).cuda()
@@ -199,8 +238,8 @@ def contrastive_loss_wasserstein_tsne(t1,t2,T):
     # compute loss
     dist, P, pos_sim = sinkhorn(t1,t2)
     pos_sim = torch.exp( (1/(1+pos_sim**2)) / T)
-    mask = (torch.ones_like(pos_sim) - torch.eye(256, device=pos_sim.device)).bool()
-    pos_sim = pos_sim.masked_select(~mask).view(256, -1)
+    mask = (torch.ones_like(pos_sim) - torch.eye(int(n_samples/2), device=pos_sim.device)).bool()
+    pos_sim = pos_sim.masked_select(~mask).view(int(n_samples/2), -1)
     pos_sim = torch.reshape(pos_sim, (-1,))
     pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
     loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
